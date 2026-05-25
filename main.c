@@ -7,6 +7,7 @@ void get_password_digit(){
     printf("Введите количество чисел в пароле: ");
     scanf("%d", &d);
 
+    
     char filename[100];
     sprintf(filename, "digit_password_%d.txt", d);
     password_digit(d, filename);
