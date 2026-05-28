@@ -18,4 +18,8 @@ record_list* add_record(const char* service_name, const char* password, record_l
 record_list* delete_record(const char* service_name, record_list* head);
 void print_all_records(record_list* head);
 
+/*Работа с файлами*/
+record_list* load_records(const char* name);
+void save_in_file(record_list* head, const char* name);
+
 #endif

@@ -3,14 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define PASSWORD_MAX_LEN 25
-#define SERVICE_MAX_LEN 25
+#define PASSWORD_MAX_LEN 100
+#define SERVICE_MAX_LEN 100
 
-static void* xmalloc(int size){
+static void* xmalloc(size_t size){
     void* result = malloc(size);
     if (!result){
-        printf("Memory error");
-        exit(1);
+        printf("Ошибка при выделении памяти");
+        exit(EXIT_FAILURE);
     }
     return result;
 }
@@ -26,11 +26,11 @@ static void free_record_list(record_list* cur){
 }
 
 static record_list* create_record(const char* service_name, const char* password){
-    record_list* new_node = (record_list*) xmalloc(sizeof(record_list));
-    record* new_record = (record* ) xmalloc(sizeof(record));
+    record_list* new_node = xmalloc(sizeof(record_list));
+    record* new_record = xmalloc(sizeof(record));
 
-    new_record->password = (char*) xmalloc(sizeof(char) * (PASSWORD_MAX_LEN + 1));
-    new_record->service_name = (char*) xmalloc(sizeof(char) * (SERVICE_MAX_LEN + 1));
+    new_record->password = xmalloc(sizeof(char) * (PASSWORD_MAX_LEN + 1));
+    new_record->service_name = xmalloc(sizeof(char) * (SERVICE_MAX_LEN + 1));
 
     strncpy(new_record->password, password, PASSWORD_MAX_LEN);
     new_record->password[PASSWORD_MAX_LEN] = '\0';
@@ -72,7 +72,7 @@ record_list* delete_record(const char* service_name, record_list* head){
     record_list* cur = head;
 
     while (cur->next){
-        if (cur->next && strcmp(cur->next->value->service_name,service_name) == 0){
+        if (strcmp(cur->next->value->service_name,service_name) == 0){
             record_list* tmp = cur->next;
             cur->next = cur->next->next;
     
@@ -95,4 +95,61 @@ void print_all_records(record_list* head){
         printf("Пароль: %s\n\n", head->value->password);
         head = head->next;
     }
+}
+
+void save_in_file(record_list* head, const char* name){
+    FILE* f = fopen(name, "w");
+    if (!f){
+        printf("Нет файла в текущей директории\n");
+        return;
+    }
+    
+    while(head){
+        fprintf(f, "service_name: %s\npassword: %s\n\n", head->value->service_name, head->value->password);
+        head = head->next;
+    }
+    fclose(f);
+
+    printf("Сохранение прошло успешно");
+}
+
+record_list* load_records(const char* name){
+    FILE* f = fopen(name, "r");
+    if (!f){
+        printf("Нет файла в текущей директории\n");
+        return NULL;
+    }
+
+    record_list* head = NULL;
+    char service_name[SERVICE_MAX_LEN + 1];
+    char password[PASSWORD_MAX_LEN + 1];
+    char line[256];
+    
+    while (fgets(line, sizeof(line), f)) {
+        // Ищем строку с service_name
+        if (strncmp(line, "service_name: ", 14) == 0) {
+            
+            char *name_start = line + 14;
+            name_start[strcspn(name_start, "\n")] = '\0';
+            strncpy(service_name, name_start, SERVICE_MAX_LEN);
+            service_name[SERVICE_MAX_LEN] = '\0';
+            
+            if (fgets(line, sizeof(line), f)) {
+                if (strncmp(line, "password: ", 10) == 0) {
+                    char *pass_start = line + 10;
+                    pass_start[strcspn(pass_start, "\n")] = '\0';
+                    strncpy(password, pass_start, PASSWORD_MAX_LEN);
+                    password[PASSWORD_MAX_LEN] = '\0';
+                    
+                    head = add_record(service_name, password, head);
+                    
+                    fgets(line, sizeof(line), f);
+                }
+            }
+        }
+    }
+    
+    fclose(f);
+    printf("Загрузка завершена\n");
+    return head;
 }
